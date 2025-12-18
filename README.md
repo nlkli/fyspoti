@@ -2,4 +2,4 @@
 
 ## TODO
 
-- [x] Firs handshake
+- [x] First handshake
