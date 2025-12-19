@@ -1,11 +1,13 @@
 use protobuf::Message;
 use rand::RngCore;
-use serde::Deserialize;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 mod protocol;
 mod consts;
 mod http;
 mod dh;
+mod client;
+mod conn;
+mod codec;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
