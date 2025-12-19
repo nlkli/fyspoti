@@ -4,6 +4,7 @@ use num_integer::Integer;
 use num_traits::{One, Zero};
 use rand::{CryptoRng, Rng};
 
+
 static DH_GENERATOR: LazyLock<BigUint> = LazyLock::new(|| BigUint::from_bytes_be(&[0x02]));
 static DH_PRIME: LazyLock<BigUint> = LazyLock::new(|| {
     BigUint::from_bytes_be(&[

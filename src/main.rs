@@ -4,74 +4,24 @@ use serde::Deserialize;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 mod protocol;
 mod consts;
+mod http;
 mod dh;
-
-#[derive(Debug, Copy, Clone)]
-pub enum PacketType {
-    SecretBlock = 0x02,
-    Ping = 0x04,
-    StreamChunk = 0x08,
-    StreamChunkRes = 0x09,
-    ChannelError = 0x0a,
-    ChannelAbort = 0x0b,
-    RequestKey = 0x0c,
-    AesKey = 0x0d,
-    AesKeyError = 0x0e,
-    Image = 0x19,
-    CountryCode = 0x1b,
-    Pong = 0x49,
-    PongAck = 0x4a,
-    Pause = 0x4b,
-    ProductInfo = 0x50,
-    LegacyWelcome = 0x69,
-    LicenseVersion = 0x76,
-    Login = 0xab,
-    APWelcome = 0xac,
-    AuthFailure = 0xad,
-    MercuryReq = 0xb2,
-    MercurySub = 0xb3,
-    MercuryUnsub = 0xb4,
-    MercuryEvent = 0xb5,
-    TrackEndedTime = 0x82,
-    UnknownDataAllZeros = 0x1f,
-    PreferredLocale = 0x74,
-    Unknown0x0f = 0x0f,
-    Unknown0x10 = 0x10,
-    Unknown0x4f = 0x4f,
-    Unknown0xb6 = 0xb6,
-}
-
-#[derive(Deserialize, Default, Debug)]
-pub struct ApResolveData {
-    accesspoint: Vec<String>,
-    dealer: Vec<String>,
-    spclient: Vec<String>,
-}
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let response =
-        reqwest::get("https://apresolve.spotify.com/?type=accesspoint&type=dealer&type=spclient")
-            .await?;
-    let body = response.bytes().await?;
-    let data = serde_json::from_slice::<ApResolveData>(&body)?;
-
+    let data = http::reqwest_ap_resolve_data().await?;
     if data.accesspoint.is_empty() {
         panic!("empty accesspoint list");
     }
-
     println!("{:#?}", data);
-
     let accesspoint = data
-        .accesspoint
-        .iter()
-        .find(|s| s.ends_with(":4070"))
-        .cloned()
+        .accesspoint_4070()
+        .next()
         .unwrap();
 
     let (host, port) = accesspoint
         .split_once(":")
-        .map(|(h, p)| (h.to_string(), p.parse::<u16>().unwrap_or(443)))
+        .map(|(h, p)| (h.to_string(), p.parse::<u16>().unwrap_or(4070)))
         .unwrap();
 
     let stream = tokio::net::TcpStream::connect((host.as_str(), port)).await?;
@@ -79,6 +29,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let local_keys = dh::DhLocalKeys::random(&mut rand::rng());
     let gc = local_keys.public_key();
+
+    println!("gc len: {}", gc.len());
+    println!("gc: {:?}", gc);
 
     let mut packet = protocol::keyexchange::ClientHello::new();
     packet
