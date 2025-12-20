@@ -6,6 +6,6 @@
 - [x] Diffie Hellman
 - [x] First handshake
 - [x] Codec
-- [ ] Own error types
+- [ ] Own errors
 - [ ] Base auth
 - [ ] Base client impl
