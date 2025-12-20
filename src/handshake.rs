@@ -5,6 +5,7 @@ use rsa::{BigUint, Pkcs1v15Sign, RsaPublicKey};
 use sha1::{Digest, Sha1};
 use tokio::io::{self, AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
 use tokio_util::codec::{Decoder, Framed};
+use thiserror::Error;
 
 use crate::consts::SPOTIFY_VERSION;
 use crate::codec::ApCodec;
@@ -33,6 +34,14 @@ const SERVER_KEY: [u8; 256] = [
     0xc2, 0xba, 0x86, 0x30, 0x42, 0xea, 0x9d, 0xb3, 0x08, 0x6c, 0x19, 0x0e, 0x48, 0xb3, 0x9d, 0x66,
     0xeb, 0x00, 0x06, 0xa2, 0x5a, 0xee, 0xa1, 0x1b, 0x13, 0x87, 0x3c, 0xd7, 0x19, 0xe6, 0x55, 0xbd,
 ];
+
+#[derive(Debug, Error)]
+pub enum HandshakeError {
+    #[error("invalid key length")]
+    InvalidLength,
+    #[error("server key verification failed")]
+    VerificationFailed,
+}
 
 pub async fn handshake<T: AsyncRead + AsyncWrite + Unpin>(mut conn: T) -> io::Result<Framed<T, ApCodec>> {
     let local_keys = DhLocalKeys::random(&mut rand::rng());
@@ -65,13 +74,13 @@ pub async fn handshake<T: AsyncRead + AsyncWrite + Unpin>(mut conn: T) -> io::Re
     let n = BigUint::from_bytes_be(&SERVER_KEY);
     let e = BigUint::new(vec![65537]);
     let public_key = RsaPublicKey::new(n, e)
-        .map_err(|_| io::Error::new(io::ErrorKind::InvalidData, "handshake verification failed"))?;
+        .map_err(|_| io::Error::new(io::ErrorKind::InvalidData, HandshakeError::VerificationFailed))?;
 
     let hash = Sha1::digest(&remote_key);
     let padding = Pkcs1v15Sign::new::<Sha1>();
     public_key
         .verify(padding, &hash, &remote_signature)
-        .map_err(|_| io::Error::new(io::ErrorKind::InvalidData, "handshake verification failed"))?;
+        .map_err(|_| io::Error::new(io::ErrorKind::InvalidData, HandshakeError::VerificationFailed))?;
 
     let shared_secret = local_keys.shared_secret(&remote_key);
     let (challenge, send_key, recv_key) = compute_keys(&shared_secret, &accumulator)?;
@@ -189,14 +198,14 @@ fn compute_keys(shared_secret: &[u8], packets: &[u8]) -> io::Result<(Vec<u8>, Ve
     let mut data = Vec::with_capacity(0x64);
     for i in 1..6 {
         let mut mac = HmacSha1::new_from_slice(shared_secret)
-            .map_err(|_| io::Error::new(io::ErrorKind::InvalidData, "invalid lenght"))?;
+            .map_err(|_| io::Error::new(io::ErrorKind::InvalidData, HandshakeError::InvalidLength))?;
         mac.update(packets);
         mac.update(&[i]);
         data.extend_from_slice(&mac.finalize().into_bytes());
     }
 
     let mut mac = HmacSha1::new_from_slice(&data[..0x14])
-        .map_err(|_| io::Error::new(io::ErrorKind::InvalidData, "handshake invalid lenght"))?;
+        .map_err(|_| io::Error::new(io::ErrorKind::InvalidData, HandshakeError::InvalidLength))?;
     mac.update(packets);
 
     Ok((

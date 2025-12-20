@@ -1,37 +1,84 @@
 pub const SPOTIFY_VERSION: u64 = 124200290;
 
-#[derive(Debug, Copy, Clone)]
+#[repr(u8)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub enum PacketType {
-    SecretBlock = 0x02,
-    Ping = 0x04,
-    StreamChunk = 0x08,
-    StreamChunkRes = 0x09,
-    ChannelError = 0x0a,
-    ChannelAbort = 0x0b,
-    RequestKey = 0x0c,
-    AesKey = 0x0d,
-    AesKeyError = 0x0e,
-    Image = 0x19,
-    CountryCode = 0x1b,
-    Pong = 0x49,
-    PongAck = 0x4a,
-    Pause = 0x4b,
-    ProductInfo = 0x50,
-    LegacyWelcome = 0x69,
-    LicenseVersion = 0x76,
-    Login = 0xab,
-    APWelcome = 0xac,
-    AuthFailure = 0xad,
-    MercuryReq = 0xb2,
-    MercurySub = 0xb3,
-    MercuryUnsub = 0xb4,
-    MercuryEvent = 0xb5,
-    TrackEndedTime = 0x82,
-    UnknownDataAllZeros = 0x1f,
-    PreferredLocale = 0x74,
-    Unknown0x0f = 0x0f,
-    Unknown0x10 = 0x10,
-    Unknown0x4f = 0x4f,
-    Unknown0xb6 = 0xb6,
+    SecretBlock = 2,
+    Ping = 4,
+    StreamChunk = 8,
+    StreamChunkRes = 9,
+    ChannelError = 10,
+    ChannelAbort = 11,
+    RequestKey = 12,
+    AesKey = 13,
+    AesKeyError = 14,
+
+    Image = 25,
+    CountryCode = 27,
+    UnknownDataAllZeros = 31,
+
+    Pong = 73,
+    PongAck = 74,
+    Pause = 75,
+
+    ProductInfo = 80,
+    LegacyWelcome = 105,
+    PreferredLocale = 116,
+    LicenseVersion = 118,
+
+    TrackEndedTime = 130,
+
+    Login = 171,
+    APWelcome = 172,
+    AuthFailure = 173,
+
+    MercuryReq = 178,
+    MercurySub = 179,
+    MercuryUnsub = 180,
+    MercuryEvent = 181,
+
+    Unknown = 255,
 }
 
+impl From<u8> for PacketType {
+    #[inline]
+    fn from(v: u8) -> Self {
+        match v {
+            2 => Self::SecretBlock,
+            4 => Self::Ping,
+            8 => Self::StreamChunk,
+            9 => Self::StreamChunkRes,
+            10 => Self::ChannelError,
+            11 => Self::ChannelAbort,
+            12 => Self::RequestKey,
+            13 => Self::AesKey,
+            14 => Self::AesKeyError,
+
+            25 => Self::Image,
+            27 => Self::CountryCode,
+            31 => Self::UnknownDataAllZeros,
+
+            73 => Self::Pong,
+            74 => Self::PongAck,
+            75 => Self::Pause,
+
+            80 => Self::ProductInfo,
+            105 => Self::LegacyWelcome,
+            116 => Self::PreferredLocale,
+            118 => Self::LicenseVersion,
+
+            130 => Self::TrackEndedTime,
+
+            171 => Self::Login,
+            172 => Self::APWelcome,
+            173 => Self::AuthFailure,
+
+            178 => Self::MercuryReq,
+            179 => Self::MercurySub,
+            180 => Self::MercuryUnsub,
+            181 => Self::MercuryEvent,
+
+            _ => Self::Unknown,
+        }
+    }
+}

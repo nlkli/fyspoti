@@ -8,10 +8,11 @@ pub struct ApResolveData {
 }
 
 impl ApResolveData {
-    pub fn accesspoint_4070(&self) -> impl Iterator<Item = &String> {
+    pub fn accesspoint_4070(&self) -> impl Iterator<Item = (&str, u16)> {
         self.accesspoint
             .iter()
             .filter(|s| s.ends_with(":4070"))
+            .map(|s| (s.split_once(":").unwrap().0, 4070))
     }
 }
 
